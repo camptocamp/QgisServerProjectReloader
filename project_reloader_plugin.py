@@ -39,16 +39,15 @@ class ProjectReloaderPlugin(QgsServerFilter):
         if not QgsProject.instance().fileName():
             QgsMessageLog.logMessage(f"Project filename is empty, nothing to do.", NAME, level=Qgis.Info)
             return
-
         source_project_time = QgsProject.instance().lastModified().toPyDateTime() # fichier / base(métadonnée des métas)
-        source_project_path = QgsProject.instance().homePath()
-        if self._last_reload_times[source_project_path] is None:
+        source_project_path = QgsProject.instance().fileName()
+        if not source_project_path in self._last_reload_times:
             self._last_reload_times[source_project_path] = source_project_time
         else:
             QgsMessageLog.logMessage(f"source_project_time: {source_project_time}",  NAME, level=Qgis.Info)
-            QgsMessageLog.logMessage(f"last_reload_time: {self._last_reload_time}", NAME, level=Qgis.Info)
+            QgsMessageLog.logMessage(f"last_reload_time: {self._last_reload_times[source_project_path]}", NAME, level=Qgis.Info)
 
-            if source_project_time > self._last_reload_time:
+            if source_project_time > self._last_reload_times[source_project_path]:
                 self._reloading = True
                 QgsMessageLog.logMessage(f"Reloading project", NAME, level=Qgis.Warning)
                 QgsProject.instance().read()
