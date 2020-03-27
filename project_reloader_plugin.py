@@ -39,7 +39,7 @@ class ProjectReloaderPlugin(QgsServerFilter):
         if not QgsProject.instance().fileName():
             QgsMessageLog.logMessage(f"Project filename is empty, nothing to do.", NAME, level=Qgis.Info)
             return
-        source_project_time = QgsProject.instance().lastModified().toPyDateTime() # fichier / base(métadonnée des métas)
+        source_project_time = QgsProject.instance().lastModified().toPyDateTime()
         source_project_path = QgsProject.instance().fileName()
         if not source_project_path in self._last_reload_times:
             self._last_reload_times[source_project_path] = source_project_time

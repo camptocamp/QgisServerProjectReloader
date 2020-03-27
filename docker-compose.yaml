@@ -1,9 +1,26 @@
 version: '3'
+
+volumes:
+  api-db-data:
 services:
   qgisserver:
     image: camptocamp/qgis-server:latest
     volumes:
-      - .:/var/www/plugins/QgisServerProjectReloader
-      - ./project:/project/
+      - ./:/var/www/plugins/ProjectReloader
+      - ./data:/project/
     ports:
       - 8380:80
+    environment:
+      - QGIS_SERVER_LOG_LEVEL=0
+      #- QGIS_PROJECT_FILE=postgresql://nxo:nxo@apidb:5432?sslmode=disable&dbname=nxo&schema=public&project=test2
+
+  apidb:
+      image: mdillon/postgis:11-alpine
+      ports:
+        - "54332:5432"
+      environment:
+        POSTGRES_USER: qgis
+        POSTGRES_PASSWORD: qgis
+        POSTGRES_DB: qgis
+      volumes:
+        - api-db-data:/var/lib/postgresql
