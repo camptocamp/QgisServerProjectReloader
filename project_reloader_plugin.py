@@ -10,14 +10,14 @@ from ProjectReloader import __name__ as NAME
 
 class ProjectReloaderPlugin(QgsServerFilter):
     """
-    This plugin checks if the project is loaded via postgresql.
-    it then check periodically if the project needs to be reloaded.
+    This plugin checks if the project from the Map Request value is loaded.
+    it then check periodically if current requested project needs to be reloaded.
     """
 
     def __init__(self, server_iface: QgsServerInterface) -> None:
         super().__init__(server_iface)
         self._reloading = False
-        self._last_reload_time = None
+        self._last_reload_times = {}
         QgsMessageLog.logMessage(f"Registering ProjectReloaderPlugin", NAME, level=Qgis.Info)
         self.serverInterface().registerFilter(self)
 
@@ -40,9 +40,10 @@ class ProjectReloaderPlugin(QgsServerFilter):
             QgsMessageLog.logMessage(f"Project filename is empty, nothing to do.", NAME, level=Qgis.Info)
             return
 
-        source_project_time = QgsProject.instance().lastModified().toPyDateTime()
-        if self._last_reload_time is None:
-            self._last_reload_time = source_project_time
+        source_project_time = QgsProject.instance().lastModified().toPyDateTime() # fichier / base(métadonnée des métas)
+        source_project_path = QgsProject.instance().homePath()
+        if self._last_reload_times[source_project_path] is None:
+            self._last_reload_times[source_project_path] = source_project_time
         else:
             QgsMessageLog.logMessage(f"source_project_time: {source_project_time}",  NAME, level=Qgis.Info)
             QgsMessageLog.logMessage(f"last_reload_time: {self._last_reload_time}", NAME, level=Qgis.Info)
@@ -52,4 +53,4 @@ class ProjectReloaderPlugin(QgsServerFilter):
                 QgsMessageLog.logMessage(f"Reloading project", NAME, level=Qgis.Warning)
                 QgsProject.instance().read()
                 self._reloading = False
-                self._last_reload_time = source_project_time
+                self._last_reload_times[source_project_path] = source_project_time
