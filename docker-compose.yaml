@@ -1,0 +1,9 @@
+version: '3'
+services:
+  qgisserver:
+    image: camptocamp/qgis-server:latest
+    volumes:
+      - .:/var/www/plugins/QgisServerProjectReloader
+      - ./project:/project/
+    ports:
+      - 8380:80
