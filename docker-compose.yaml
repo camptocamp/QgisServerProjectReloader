@@ -23,9 +23,5 @@ services:
         - "54332:5432"
       env_file:
         - config.env
-      environment:
-        POSTGRES_USER: qgis
-        POSTGRES_PASSWORD: qgis
-        POSTGRES_DB: qgis
       volumes:
         - api-db-data:/var/lib/postgresql
