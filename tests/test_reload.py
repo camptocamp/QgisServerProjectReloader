@@ -1,43 +1,51 @@
-import os
-from qgis.core import QgsProject
+from qgis.core import QgsProject, QgsVectorLayer
 import requests
 from xml.etree import ElementTree
-from shutil import copyfile
-import pytest
+
+LAYER_PATH = "/data/test.gpkg"
+
+FILE_PROJECT_PATH = "/data/project.qgs"
+DB_PROJECT_PATH = "postgresql://qgis:qgis@db:5432?sslmode=disable&dbname=qgis&schema=public&project=project"
 
 
-@pytest.fixture(scope="session", autouse=True)
-def set_up():
-    # Will be executed before the first test
-    copyfile("project.qgs", "base_project.qgs")
-    yield
-    # Will be executed after the last test
-    copyfile("base_project.qgs", "project.qgs")
-    os.remove("base_project.qgs")
+def one_layer_file_project():
+    project = QgsProject()
+
+    layer = QgsVectorLayer(LAYER_PATH + '|layername=faces', "faces", "ogr")
+    assert layer.isValid()
+    project.addMapLayer(layer)
+
+    project.write(FILE_PROJECT_PATH)
 
 
-def _get_capabilities():
-    url = "http://172.17.0.1:8380/?SERVICE=WMS&REQUEST=GetCapabilities"
+def two_layers_file_project():
+    project = QgsProject()
+
+    layer = QgsVectorLayer(LAYER_PATH + '|layername=faces', "faces", "ogr")
+    assert layer.isValid()
+    project.addMapLayer(layer)
+
+    layer = QgsVectorLayer(LAYER_PATH + '|layername=state', "state", "ogr")
+    assert layer.isValid()
+    project.addMapLayer(layer)
+
+    project.write(FILE_PROJECT_PATH)
+
+
+def _get_layers_count(project_path):
+    url = "http://qgisserver:8000/?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetCapabilities&MAP={}".format(project_path)
     response = requests.get(url)
 
     tree = ElementTree.fromstring(response.content)
-    layers = tree.getchildren()[1].getchildren()[3]
-    layer_count = 0
-    for layer in layers.getchildren():
-        if "Layer" in layer.tag:
-            layer_count += 1
-    return layer_count
+    root_layer = tree.find('./{http://www.opengis.net/wms}Capability/{http://www.opengis.net/wms}Layer')
+    return len(root_layer.findall('{http://www.opengis.net/wms}Layer'))
 
 
-def test_get_initial_layer_count():
-    assert _get_capabilities(), 2
+class TestProjectReloaderPlugin():
 
+    def test_file_project_reload(self):
+        two_layers_file_project()
+        assert _get_layers_count(project_path=FILE_PROJECT_PATH), 1
 
-def test_remove_layer_from_project():
-
-    project = QgsProject.instance()
-    project.read("project.qgs")
-    id_layer = list(project.mapLayers().keys())[0]
-    project.removeMapLayer(id_layer)
-    project.write()
-    assert _get_capabilities(), 1
+        two_layers_file_project()
+        assert _get_layers_count(project_path=FILE_PROJECT_PATH), 2
