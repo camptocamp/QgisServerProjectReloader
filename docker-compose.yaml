@@ -11,6 +11,7 @@ services:
     environment:
       - QGIS_PLUGINPATH=/var/www/plugins
       - QGIS_SERVER_LOG_LEVEL=0
+      - QGIS_PROJECT_FILE=
     ports:
       - 8000:8000
     command:
