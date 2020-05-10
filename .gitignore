@@ -1,5 +1,4 @@
-*.pyc
 *~
-*-shm
-*-wal
+*.gfs
+*.pyc
 tests/data/project.qgs

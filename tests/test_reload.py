@@ -2,8 +2,9 @@ from qgis.core import QgsProject, QgsVectorLayer
 import requests
 from xml.etree import ElementTree
 
-LAYER_PATH = "/data/test.gpkg"
-
+DATA_PATH = "/data"
+LAYER1_PATH = "/data/faces.gml"
+LAYER2_PATH = "/data/state.gml"
 FILE_PROJECT_PATH = "/data/project.qgs"
 DB_PROJECT_PATH = "postgresql://qgis:qgis@db:5432?sslmode=disable&dbname=qgis&schema=public&project=project"
 
@@ -11,7 +12,7 @@ DB_PROJECT_PATH = "postgresql://qgis:qgis@db:5432?sslmode=disable&dbname=qgis&sc
 def one_layer_file_project():
     project = QgsProject()
 
-    layer = QgsVectorLayer(LAYER_PATH + '|layername=faces', "faces", "ogr")
+    layer = QgsVectorLayer(LAYER1_PATH, "faces", "ogr")
     assert layer.isValid()
     project.addMapLayer(layer)
 
@@ -21,11 +22,11 @@ def one_layer_file_project():
 def two_layers_file_project():
     project = QgsProject()
 
-    layer = QgsVectorLayer(LAYER_PATH + '|layername=faces', "faces", "ogr")
+    layer = QgsVectorLayer(LAYER1_PATH, "faces", "ogr")
     assert layer.isValid()
     project.addMapLayer(layer)
 
-    layer = QgsVectorLayer(LAYER_PATH + '|layername=state', "state", "ogr")
+    layer = QgsVectorLayer(LAYER2_PATH, "state", "ogr")
     assert layer.isValid()
     project.addMapLayer(layer)
 
