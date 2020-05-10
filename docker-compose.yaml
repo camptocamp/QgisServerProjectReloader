@@ -3,6 +3,8 @@ version: '3.4'
 services:
   qgisserver:
     image: qgis/qgis:release-3_12
+    depends_on:
+      - db
     volumes:
       - ./ProjectReloader/:/var/www/plugins/ProjectReloader
       - ./tests/data:/data
@@ -26,9 +28,6 @@ services:
     build:
       context: ./
       target: tester
-    depends_on:
-      - qgisserver
-      - db
     volumes:
       - ./tests:/tests
       - ./tests/data:/data

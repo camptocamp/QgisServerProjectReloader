@@ -13,7 +13,8 @@ build: ## Build docker images
 
 .PHONY: test
 test: ## Run automated tests
-	docker-compose run --rm tester pytest /tests
+	docker-compose up -d --force-recreate qgisserver \
+		&& docker-compose run --rm tester pytest /tests
 
 .PHONY: clean
 clean: ## Stop and remove containers
