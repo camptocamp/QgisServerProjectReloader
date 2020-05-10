@@ -1,27 +1,36 @@
-version: '3'
+version: '3.4'
 
-volumes:
-  api-db-data:
 services:
   qgisserver:
+    image: qgis/qgis:release-3_12
     depends_on:
-      - apidb
-    build: ./
+      - db
     volumes:
-      - ./:/var/www/plugins/ProjectReloader
-      - ./tests:/project/
-    ports:
-      - 8380:80
+      - ./ProjectReloader/:/var/www/plugins/ProjectReloader
+      - ./tests/data:/data
     environment:
+      - QGIS_PLUGINPATH=/var/www/plugins
       - QGIS_SERVER_LOG_LEVEL=0
-      - PYTHONPATH=/usr/local/share/qgis/python/qgis/
-      #- QGIS_PROJECT_FILE=postgresql://nxo:nxo@apidb:5432?sslmode=disable&dbname=nxo&schema=public&project=test2
+      - QGIS_PROJECT_FILE=
+    ports:
+      - 8000:8000
+    command:
+      - "qgis_mapserver"
 
-  apidb:
-      image: mdillon/postgis:11-alpine
-      ports:
-        - "54332:5432"
-      env_file:
-        - config.env
-      volumes:
-        - api-db-data:/var/lib/postgresql
+  db:
+    image: mdillon/postgis:11-alpine
+    environment:
+      - PGPORT=5432
+      - POSTGRES_USER=qgis
+      - POSTGRES_PASSWORD=qgis
+      - POSTGRES_DB=qgis
+
+  tester:
+    build:
+      context: ./
+      target: tester
+    volumes:
+      - ./tests:/tests
+      - ./tests/data:/data
+    environment:
+      - PYTHONPATH=/usr/local/share/qgis/python/qgis/

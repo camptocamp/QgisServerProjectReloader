@@ -1,43 +1,88 @@
-import os
-from qgis.core import QgsProject
+from qgis.core import QgsProject, QgsVectorLayer
 import requests
 from xml.etree import ElementTree
-from shutil import copyfile
-import pytest
+
+DATA_PATH = "/data"
+LAYER1_PATH = "/data/faces.gml"
+LAYER2_PATH = "/data/state.gml"
+FILE_PROJECT_PATH = "/data/project.qgs"
+DB_PROJECT_PATH = "postgresql://qgis:qgis@db:5432?sslmode=disable&dbname=qgis&schema=public&project=project"
+QGIS_SERVER_URL = "http://qgisserver:8000"
 
 
-@pytest.fixture(scope="session", autouse=True)
-def set_up():
-    # Will be executed before the first test
-    copyfile("project.qgs", "base_project.qgs")
-    yield
-    # Will be executed after the last test
-    copyfile("base_project.qgs", "project.qgs")
-    os.remove("base_project.qgs")
+def one_layer_project():
+    project = QgsProject()
+
+    layer = QgsVectorLayer(LAYER1_PATH, "faces", "ogr")
+    assert layer.isValid()
+    project.addMapLayer(layer)
+
+    return project
 
 
-def _get_capabilities():
-    url = "http://172.17.0.1:8380/?SERVICE=WMS&REQUEST=GetCapabilities"
-    response = requests.get(url)
+def two_layers_project():
+    project = QgsProject()
 
+    layer = QgsVectorLayer(LAYER1_PATH, "faces", "ogr")
+    assert layer.isValid()
+    project.addMapLayer(layer)
+
+    layer = QgsVectorLayer(LAYER2_PATH, "state", "ogr")
+    assert layer.isValid()
+    project.addMapLayer(layer)
+
+    return project
+    project.write(FILE_PROJECT_PATH)
+
+
+def get_layers_count(project_path):
+    response = requests.get(
+        QGIS_SERVER_URL,
+        {
+            "MAP": project_path,
+            "SERVICE": "WMS",
+            "VERSION": "1.3.0",
+            "REQUEST": "GetCapabilities",
+        }
+    )
     tree = ElementTree.fromstring(response.content)
-    layers = tree.getchildren()[1].getchildren()[3]
-    layer_count = 0
-    for layer in layers.getchildren():
-        if "Layer" in layer.tag:
-            layer_count += 1
-    return layer_count
+    root_layer = tree.find('./{http://www.opengis.net/wms}Capability/{http://www.opengis.net/wms}Layer')
+    return len(root_layer.findall('{http://www.opengis.net/wms}Layer'))
 
 
-def test_get_initial_layer_count():
-    assert _get_capabilities(), 2
+def get_map(project_path, layers):
+    return requests.get(
+        QGIS_SERVER_URL,
+        {
+            "SERVICE": "WMS",
+            "VERSION": "1.3.0",
+            "REQUEST": "GetMap",
+            "MAP": project_path,
+            "LAYERS": layers,
+            "STYLES": "default",
+            "SRS": "EPSG:4326",
+            "BBOX": "11.36429396031117,47.23595435939557,11.43933745091724,47.29938397645547",
+            "WIDTH": "256",
+            "HEIGHT": "256",
+            "FORMAT": "image/png",
+        }
+    )
 
 
-def test_remove_layer_from_project():
+class TestProjectReloaderPlugin():
 
-    project = QgsProject.instance()
-    project.read("project.qgs")
-    id_layer = list(project.mapLayers().keys())[0]
-    project.removeMapLayer(id_layer)
-    project.write()
-    assert _get_capabilities(), 1
+    def test_file_project_reload(self):
+        assert one_layer_project().write(FILE_PROJECT_PATH)
+        assert get_layers_count(FILE_PROJECT_PATH) == 1
+        assert get_map(FILE_PROJECT_PATH, "faces").status_code == 200
+        assert get_map(FILE_PROJECT_PATH, "faces,state").status_code == 400
+        assert two_layers_project().write(FILE_PROJECT_PATH)
+        assert get_map(FILE_PROJECT_PATH, "faces,state").status_code == 200
+
+    def test_db_project_reload(self):
+        assert one_layer_project().write(DB_PROJECT_PATH)
+        assert get_layers_count(FILE_PROJECT_PATH) == 1
+        assert get_map(DB_PROJECT_PATH, "faces").status_code == 200
+        assert get_map(DB_PROJECT_PATH, "faces,state").status_code == 400
+        assert two_layers_project().write(DB_PROJECT_PATH)
+        assert get_map(DB_PROJECT_PATH, "faces,state").status_code == 200

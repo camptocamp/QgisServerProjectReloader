@@ -5,9 +5,10 @@ After applying changes to a qgisproject (styling, adding, ect...),
  Thus applying the changes without having to restart the QGIS Server.
 
 Both projects stored on the server and in the database are reloaded.
- 
- 
- # Test
- 
-    make test
- 
+
+
+# Run automated tests
+
+```
+make test
+```

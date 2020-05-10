@@ -1,9 +1,8 @@
 import sys
 import traceback
-from datetime import timedelta
 
-from qgis.core import QgsMessageLog, QgsProject, Qgis
-from qgis.server import QgsServerInterface, QgsServerFilter
+from qgis.core import Qgis, QgsMessageLog
+from qgis.server import QgsConfigCache, QgsServerFilter, QgsServerInterface
 
 from ProjectReloader import __name__ as NAME
 
@@ -40,13 +39,12 @@ class ProjectReloaderPlugin(QgsServerFilter):
             )
             return
 
-        if not QgsProject.instance().fileName():
-            QgsMessageLog.logMessage(
-                f"Project filename is empty, nothing to do.", NAME, level=Qgis.Info
-            )
-            return
-        source_project_time = QgsProject.instance().lastModified().toPyDateTime()
-        source_project_path = QgsProject.instance().fileName()
+        config_file = self.serverInterface().configFilePath()
+        config_cache = QgsConfigCache.instance()
+        project = config_cache.project(config_file)
+
+        source_project_time = project.lastModified().toPyDateTime()
+        source_project_path = config_file
         if not source_project_path in self._last_reload_times:
             self._last_reload_times[source_project_path] = source_project_time
         else:
@@ -62,6 +60,6 @@ class ProjectReloaderPlugin(QgsServerFilter):
             if source_project_time > self._last_reload_times[source_project_path]:
                 self._reloading = True
                 QgsMessageLog.logMessage(f"Reloading project", NAME, level=Qgis.Warning)
-                QgsProject.instance().read()
+                project.read()
                 self._reloading = False
                 self._last_reload_times[source_project_path] = source_project_time

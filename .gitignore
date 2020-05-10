@@ -1,0 +1,4 @@
+*~
+*.gfs
+*.pyc
+tests/data/project.qgs
